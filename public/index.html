@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CineTune - Movies & Soundtracks Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* --- Base --- */
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Montserrat',sans-serif;background:#121212;color:#f0f0f0;overflow-x:hidden;}
+
+/* --- Header --- */
+header{
+  background:#1f1f1f;
+  padding:25px 80px;
+  text-align:center;
+  box-shadow:0 4px 12px rgba(0,0,0,0.5);
+  position:sticky;
+  top:0;
+  z-index:1000;
+}
+header h1{color:#ffcc00;font-size:2.2rem;letter-spacing:1px;margin-bottom:4px;}
+header p.tagline{color:#ccc;margin-top:5px;font-size:1rem;}
+
+/* --- Header Buttons --- */
+#historyBtn,#bookmarkBtn{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  background:transparent;
+  border:2px solid #ffcc00;
+  color:#ffcc00;
+  padding:6px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+  transition:all .3s;
+  z-index:5;
+}
+#historyBtn{left:25px;}
+#bookmarkBtn{right:25px;}
+#historyBtn:hover,#bookmarkBtn:hover{
+  background:#ffcc00;
+  color:#121212;
+  transform:translateY(-50%) scale(1.05);
+}
+
+/* --- Panels --- */
+#historyPanel,#bookmarkPanel{
+  position:fixed;top:0;height:100%;width:280px;background:rgba(31,31,31,0.98);
+  box-shadow:0 0 20px rgba(0,0,0,0.8);padding:20px;overflow-y:auto;
+  backdrop-filter:blur(6px);transition:0.4s ease;z-index:998;
+}
+#historyPanel{left:-300px;}
+#bookmarkPanel{right:-300px;}
+#historyPanel.active{left:0;}
+#bookmarkPanel.active{right:0;}
+
+.panel-title{
+  color:#ffcc00;margin-bottom:15px;font-size:1.4rem;text-align:center;
+  border-bottom:2px solid #ffcc00;padding-bottom:6px;
+}
+
+.clear-btn{
+  background:none;border:1px solid #ffcc00;color:#ffcc00;
+  padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:600;
+  width:100%;transition:.3s;margin-bottom:15px;
+}
+.clear-btn:hover{background:#ffcc00;color:#121212;}
+
+.panel-item{
+  display:flex;align-items:center;justify-content:space-between;
+  background:#2a2a2a;margin-bottom:10px;padding:8px 10px;border-radius:10px;
+  cursor:pointer;transition:.3s;
+}
+.panel-item:hover{background:#ffcc00;color:#121212;transform:scale(1.03);}
+.panel-info{display:flex;align-items:center;}
+.panel-info img{
+  width:45px;height:45px;border-radius:50%;object-fit:cover;
+  margin-right:10px;border:2px solid #ffcc00;
+}
+.delete-btn{background:none;border:none;color:#ff4444;font-size:16px;cursor:pointer;}
+.delete-btn:hover{color:#ff0000;transform:scale(1.2);}
+
+/* --- Search --- */
+.search-container{display:flex;justify-content:center;padding:25px;gap:12px;}
+#query{width:50%;padding:14px;font-size:16px;border-radius:10px;border:none;outline:none;background:#2a2a2a;color:#f0f0f0;}
+#query::placeholder{color:#aaa;}
+button{padding:14px 22px;font-size:16px;border-radius:10px;border:none;background:#ffcc00;color:#121212;cursor:pointer;font-weight:600;transition:.3s;}
+button:hover{background:#e6b800;transform:scale(1.05);}
+
+/* --- Results --- */
+.result{padding:20px;display:flex;flex-direction:column;gap:25px;max-width:1200px;margin:auto;}
+
+/* --- Headings --- */
+.section-heading{
+  font-size:2rem;color:#FFD700;margin-bottom:15px;border-bottom:2px solid #FFD700;
+  padding-bottom:5px;text-shadow:1px 1px 5px #000;letter-spacing:1px;font-weight:700;transition:.3s;
+}
+.section-heading:hover{text-shadow:2px 2px 10px #FFD700;transform:scale(1.05);}
+
+/* --- Cards --- */
+.card{
+  display:flex;flex-direction:row;background:#1f1f1f;border-radius:15px;overflow:hidden;
+  text-decoration:none;color:inherit;box-shadow:0 6px 20px rgba(0,0,0,0.7);
+  transition:transform .3s,box-shadow .3s;position:relative;
+}
+.card:hover{transform:translateY(-5px);box-shadow:0 12px 30px rgba(0,0,0,0.8);}
+.card img{width:220px;object-fit:cover;border-right:1px solid #333;transition:transform .3s;}
+.card:hover img{transform:scale(1.05);}
+.card-content{padding:18px;display:flex;flex-direction:column;}
+.card-content h3{color:#ffcc00;font-size:1.5rem;margin-bottom:8px;}
+.card-content p{margin:4px 0;font-size:14px;line-height:1.5;color:#ddd;}
+.card-content a{color:#ffcc00;text-decoration:none;font-weight:600;}
+.card-content a:hover{text-decoration:underline;}
+
+/* --- Options Button --- */
+.options-btn{
+  position:absolute;top:10px;right:10px;background:none;border:none;
+  color:#ffcc00;font-size:20px;cursor:pointer;
+}
+.options-menu{
+  position:absolute;top:35px;right:10px;background:#2a2a2a;border:1px solid #ffcc00;
+  border-radius:8px;display:none;flex-direction:column;z-index:10;
+}
+.options-menu button{
+  background:none;border:none;color:#ffcc00;padding:8px 12px;cursor:pointer;text-align:left;
+}
+.options-menu button:hover{background:#ffcc00;color:#121212;}
+
+/* --- Responsive --- */
+@media(max-width:900px){
+  .card{flex-direction:column;align-items:center;}
+  .card img{width:80%;border-right:none;border-bottom:1px solid #333;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <button id="historyBtn">History</button>
+  <h1>CineTune</h1>
+  <p class="tagline">Discover Movies & Soundtracks</p>
+  <button id="bookmarkBtn">Bookmarks</button>
+</header>
+
+<!-- History Panel -->
+<div id="historyPanel">
+  <h2 class="panel-title">Search History</h2>
+  <button id="clearHistory" class="clear-btn">Clear All</button>
+  <div id="historyList"></div>
+</div>
+
+<!-- Bookmark Panel -->
+<div id="bookmarkPanel">
+  <h2 class="panel-title">Bookmarks</h2>
+  <button id="clearBookmarks" class="clear-btn">Clear All</button>
+  <div id="bookmarkList"></div>
+</div>
+
+<div class="search-container">
+  <input type="text" id="query" placeholder="Enter movie name">
+  <button onclick="sendQuery()">Search</button>
+</div>
+
+<div class="result" id="result"></div>
+
+<script>
+const inputBox=document.getElementById("query");
+const historyBtn=document.getElementById("historyBtn");
+const bookmarkBtn=document.getElementById("bookmarkBtn");
+const historyPanel=document.getElementById("historyPanel");
+const bookmarkPanel=document.getElementById("bookmarkPanel");
+
+inputBox.addEventListener("keydown",e=>{if(e.key==='Enter')sendQuery();});
+
+document.body.addEventListener("click",(e)=>{
+  if(!historyPanel.contains(e.target)&&e.target!==historyBtn)historyPanel.classList.remove("active");
+  if(!bookmarkPanel.contains(e.target)&&e.target!==bookmarkBtn)bookmarkPanel.classList.remove("active");
+  if(!e.target.closest('.options-btn')&&!e.target.closest('.options-menu'))
+    document.querySelectorAll('.options-menu').forEach(m=>m.style.display='none');
+});
+
+historyBtn.addEventListener("click",e=>{
+  e.stopPropagation();
+  historyPanel.classList.toggle("active");
+  bookmarkPanel.classList.remove("active");
+});
+bookmarkBtn.addEventListener("click",e=>{
+  e.stopPropagation();
+  bookmarkPanel.classList.toggle("active");
+  historyPanel.classList.remove("active");
+});
+
+function loadPanel(key,listId){
+  const arr=JSON.parse(localStorage.getItem(key)||"[]");
+  const list=document.getElementById(listId);
+  list.innerHTML="";
+  arr.forEach((item,idx)=>{
+    const div=document.createElement("div");
+    div.className="panel-item";
+    div.innerHTML=`
+      <div class="panel-info">
+        <img src="${item.poster}" alt="poster">
+        <span>${item.title}</span>
+      </div>
+      <button class="delete-btn">x</button>`;
+    div.querySelector(".delete-btn").addEventListener("click",e=>{
+      e.stopPropagation();arr.splice(idx,1);
+      localStorage.setItem(key,JSON.stringify(arr));
+      loadPanel(key,listId);
+    });
+    div.addEventListener("click",()=>{
+      inputBox.value=item.title;sendQuery();
+      if(key==="searchHistory")historyPanel.classList.remove("active");
+    });
+    list.appendChild(div);
+  });
+}
+loadPanel("searchHistory","historyList");
+loadPanel("bookmarks","bookmarkList");
+
+function saveItem(key,item){
+  let arr=JSON.parse(localStorage.getItem(key)||"[]");
+  arr=[item,...arr.filter(i=>i.title!==item.title)].slice(0,10);
+  localStorage.setItem(key,JSON.stringify(arr));
+  loadPanel(key,key==="searchHistory"?"historyList":"bookmarkList");
+}
+
+document.getElementById("clearHistory").onclick=()=>{localStorage.removeItem("searchHistory");loadPanel("searchHistory","historyList");};
+document.getElementById("clearBookmarks").onclick=()=>{localStorage.removeItem("bookmarks");loadPanel("bookmarks","bookmarkList");};
+
+async function sendQuery(){
+  const input=inputBox.value.trim();
+  if(!input)return alert("Please enter something!");
+  const resultDiv=document.getElementById("result");
+  resultDiv.innerHTML="<p style='text-align:center;'>Loading...</p>";
+  try{
+    const res=await fetch("/query",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input})});
+    const data=await res.json();resultDiv.innerHTML="";
+
+    if(data.movie){
+      saveItem("searchHistory",{title:data.movie.Title,poster:data.movie.Poster!=="N/A"?data.movie.Poster:"https://via.placeholder.com/50"});
+      const heading=document.createElement("div");heading.className="section-heading";heading.textContent="🎬 Movie Details";
+      resultDiv.appendChild(heading);
+      const card=document.createElement("div");
+      card.className="card";
+      card.innerHTML=`
+        <button class="options-btn">⋮</button>
+        <div class="options-menu"><button class="add-bookmark">Add to Bookmarks</button></div>
+        <img src="${data.movie.Poster!=="N/A"?data.movie.Poster:"https://via.placeholder.com/220x330?text=No+Image"}" alt="Poster">
+        <div class="card-content">
+          <h3>${data.movie.Title} (${data.movie.Year})</h3>
+          <p><strong>Genre:</strong> ${data.movie.Genre}</p>
+          <p><strong>Director:</strong> ${data.movie.Director}</p>
+          <p><strong>Actors:</strong> ${data.movie.Actors}</p>
+          <p><strong>Awards:</strong> ${data.movie.Awards}</p>
+          <p><strong>Ratings:</strong> ${
+            data.movie.Ratings&&data.movie.Ratings.length>0?
+            data.movie.Ratings.map(r=>`${r.Source}: ${r.Value}`).join(" | "):"N/A"
+          }</p>
+          <p>${data.movie.Plot}</p>
+        </div>`;
+      resultDiv.appendChild(card);
+
+      const optionsBtn=card.querySelector(".options-btn");
+      const optionsMenu=card.querySelector(".options-menu");
+      optionsBtn.addEventListener("click",e=>{
+        e.stopPropagation();
+        document.querySelectorAll('.options-menu').forEach(m=>m.style.display='none');
+        optionsMenu.style.display=optionsMenu.style.display==="flex"?"none":"flex";
+      });
+      card.querySelector(".add-bookmark").addEventListener("click",()=>{
+        saveItem("bookmarks",{title:data.movie.Title,poster:data.movie.Poster});
+        optionsMenu.style.display="none";
+        alert("Added to bookmarks!");
+      });
+    }
+
+    if(data.songs&&data.songs.length>0){
+      const sHead=document.createElement("div");sHead.className="section-heading";sHead.textContent="🎵 Soundtracks";
+      resultDiv.appendChild(sHead);
+      data.songs.forEach(song=>{
+        const sCard=document.createElement("div");sCard.className="card song-card";
+        sCard.innerHTML=`
+          <div class="card-content">
+            <h3>${song.title}</h3>
+            <p><strong>Artist:</strong> ${song.artist}</p>
+            <p><strong>Album:</strong> ${song.album||"N/A"}</p>
+            ${song.preview_url?`<audio controls src="${song.preview_url}"></audio>`:"<p>No preview available</p>"}
+            <p><a href="${song.spotify_url}" target="_blank">Open on Spotify</a></p>
+          </div>`;
+        resultDiv.appendChild(sCard);
+      });
+    }
+  }catch(err){
+    console.error(err);
+    resultDiv.innerHTML="<p style='text-align:center;'>Something went wrong.</p>";
+  }
+}
+</script>
+
+</body>
+</html>
