@@ -2,15 +2,23 @@ import express from "express";
 import axios from "axios";
 import qs from "qs";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const app = express();
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 
-app.use(express.json());
+// ✅ Required for serving files
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ✅ Serve static files from the 'public' folder
 app.use(express.static("public"));
+app.use(express.json());
 
+// 🔑 Environment Variables
 const omdbKey = process.env.OMDB_API_KEY;
 const spotifyClientId = process.env.SPOTIFY_CLIENT_ID;
 const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
@@ -18,7 +26,7 @@ const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 let spotifyToken = "";
 let tokenExpiry = 0;
 
-// 🔑 Get Spotify token
+// 🎟️ Get Spotify token
 async function getSpotifyToken() {
   if (spotifyToken && Date.now() < tokenExpiry) return spotifyToken;
 
@@ -48,7 +56,7 @@ async function getMovieDetails(movieName) {
   return movieRes.data.Response === "True" ? movieRes.data : null;
 }
 
-// 🎵 Get verified soundtrack albums from MusicBrainz
+// 🎵 Fetch soundtrack albums from MusicBrainz
 async function getSoundtrackFromMusicBrainz(movieName) {
   try {
     const res = await axios.get("https://musicbrainz.org/ws/2/release-group/", {
@@ -59,7 +67,6 @@ async function getSoundtrackFromMusicBrainz(movieName) {
     const releaseGroups = res.data["release-groups"];
     if (!releaseGroups || releaseGroups.length === 0) return null;
 
-    // Take the first verified soundtrack
     const bestMatch = releaseGroups[0];
     return {
       title: bestMatch.title,
@@ -102,7 +109,7 @@ async function getSpotifyTracksForAlbum(albumName) {
   }
 }
 
-// 🧩 Main route
+// 🧩 Main API Route
 app.post("/query", async (req, res) => {
   const { input } = req.body;
   if (!input) return res.status(400).json({ error: "No movie name provided" });
@@ -115,7 +122,6 @@ app.post("/query", async (req, res) => {
     if (!soundtrack) return res.json({ movie, songs: [] });
 
     const songs = await getSpotifyTracksForAlbum(soundtrack.title);
-
     res.json({ movie, soundtrack, songs });
   } catch (err) {
     console.error("Server error:", err.message);
@@ -123,7 +129,12 @@ app.post("/query", async (req, res) => {
   }
 });
 
-// 🚀 Start server
+// 🌐 Serve frontend for all routes (Render-friendly)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// 🚀 Start Server
 app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
