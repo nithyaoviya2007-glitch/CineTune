@@ -10,15 +10,15 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// ✅ Required for serving files
+// Needed for resolving paths in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Serve static files from the 'public' folder
-app.use(express.static("public"));
+// Middleware
 app.use(express.json());
+app.use(express.static("public"));
 
-// 🔑 Environment Variables
+// 🔑 Environment variables
 const omdbKey = process.env.OMDB_API_KEY;
 const spotifyClientId = process.env.SPOTIFY_CLIENT_ID;
 const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
@@ -26,7 +26,7 @@ const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 let spotifyToken = "";
 let tokenExpiry = 0;
 
-// 🎟️ Get Spotify token
+// 🎧 Get Spotify token
 async function getSpotifyToken() {
   if (spotifyToken && Date.now() < tokenExpiry) return spotifyToken;
 
@@ -56,7 +56,7 @@ async function getMovieDetails(movieName) {
   return movieRes.data.Response === "True" ? movieRes.data : null;
 }
 
-// 🎵 Fetch soundtrack albums from MusicBrainz
+// 🎵 Get verified soundtrack albums from MusicBrainz
 async function getSoundtrackFromMusicBrainz(movieName) {
   try {
     const res = await axios.get("https://musicbrainz.org/ws/2/release-group/", {
@@ -109,7 +109,7 @@ async function getSpotifyTracksForAlbum(albumName) {
   }
 }
 
-// 🧩 Main API Route
+// 🧩 Main API route
 app.post("/query", async (req, res) => {
   const { input } = req.body;
   if (!input) return res.status(400).json({ error: "No movie name provided" });
@@ -122,6 +122,7 @@ app.post("/query", async (req, res) => {
     if (!soundtrack) return res.json({ movie, songs: [] });
 
     const songs = await getSpotifyTracksForAlbum(soundtrack.title);
+
     res.json({ movie, soundtrack, songs });
   } catch (err) {
     console.error("Server error:", err.message);
@@ -129,12 +130,12 @@ app.post("/query", async (req, res) => {
   }
 });
 
-// 🌐 Serve frontend for all routes (Render-friendly)
-app.get("*", (req, res) => {
+// 🌐 Catch-all route for frontend (important for Render)
+app.get("/*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// 🚀 Start Server
+// 🚀 Start server
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
